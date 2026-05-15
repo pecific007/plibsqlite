@@ -41,16 +41,13 @@ class Database:
         stmt.append(" WHERE ")
         i = 0
         for k in kwargs:
-            # print(k)
             stmt.append(f"{k} = ? ")
-            # print(stmt)
             data.append(kwargs[k])
             stmt.append(" AND ")
             i += 1
         if stmt[(len(stmt) - 1)] == " AND ":
             stmt.pop()
         where_stmt = "".join(stmt)
-        # print("where data: ", where_stmt)
         return where_stmt, data
 
     def insert_into_table(self, **kwargs):
@@ -79,18 +76,27 @@ class Database:
         stmt = []
         stmt.append("SELECT ")
         # This for selecting all values
-        if columns == "*" or len(columns) == 0:
-            print(
-                "Getting all the rows: Providing empty value for columns will by default select *"
-            )
-            stmt.append(f" * FROM {self.name}")
-            if len(where) != 0:
-                stmt.append(where)
-            sql_query = "".join(stmt)
-            print("Executing: ", sql_query)
-            print(data)
-            row = self.con.execute(sql_query, data)
-            return row
+        if isinstance(columns, str) or len(columns) == 0:
+            if columns == "*":
+                print(
+                    "Getting all the rows: Providing empty value for columns will by default select *"
+                )
+                stmt.append(f" * FROM {self.name}")
+                if len(where) != 0:
+                    stmt.append(where)
+                sql_query = "".join(stmt)
+                print("Executing: ", sql_query)
+                return self.con.execute(sql_query, data)
+            else:
+                assert columns in self.fields
+                stmt.append(columns)
+                stmt.append(f" FROM {self.name}")
+                if len(where) != 0:
+                    stmt.append(where)
+                sql_query = "".join(stmt)
+                print("Executing: ", sql_query)
+                return self.con.execute(sql_query, data)
+
         # This for selecting values from columns
         for k in columns:
             stmt.append(k)
@@ -134,7 +140,7 @@ class Database:
         self.con.commit()
 
 
-def example():
+def test():
     # Creating table
     db = Database(
         "database.db",
@@ -153,7 +159,7 @@ def example():
 
     # Selecting from table
     print("Select from table")
-    table_data = db.select_from_table(["THING_NAME"])
+    table_data = db.select_from_table("THING_NAME")
     print("Table data: ", table_data.fetchall())
 
     # Updating values from table
@@ -172,14 +178,14 @@ def example():
     print("Deleting from table")
     where_stmt, where_data = db.prep_where_statement(ID=2)
     db.delete_from_table(where_stmt, where_data)
-    table_data = db.select_from_table([])
+    table_data = db.select_from_table("*")
     print("Table data: ", table_data.fetchall())
 
     # Dropping the table
     print("Dropping table")
-    db.delete_from_table("")
+    db.delete_from_table()
     db.__del__()
 
 
 if __name__ == "__main__":
-    example()
+    test()
