@@ -80,7 +80,13 @@ class Database:
         self.con.commit()
 
     def select_from_table(
-        self, table_name: str, columns: list | str, where: str = "", data: list = []
+        self,
+        table_name: str,
+        columns: list | str,
+        where: str = "",
+        data: list = [],
+        limit: int = 0,
+        order_by: dict = {},
     ):
         table = self.tables[table_name]
         stmt = []
@@ -95,17 +101,20 @@ class Database:
                 if len(where) != 0:
                     stmt.append(where)
                 sql_query = "".join(stmt)
-                print("Executing: ", sql_query, data)
-                return self.con.execute(sql_query, data)
             else:
                 assert columns in table.fields
                 stmt.append(columns)
                 stmt.append(f" FROM {table_name}")
                 if len(where) != 0:
                     stmt.append(where)
-                sql_query = "".join(stmt)
-                print("Executing: ", sql_query, data)
-                return self.con.execute(sql_query, data)
+            if len(order_by) > 0:
+                for k in order_by:
+                    stmt.append(f" ORDER BY {k} {order_by[k]}")
+            if limit != 0:
+                stmt.append(f"LIMIT {limit}")
+            sql_query = " ".join(stmt)
+            print("Executing: ", sql_query, data)
+            return self.con.execute(sql_query, data)
 
         # This for selecting values from columns
         for k in columns:
@@ -154,6 +163,11 @@ class Database:
         self.con.commit()
 
 
+def print_select_statements(data):
+    for d in data:
+        print(d)
+
+
 def test():
     # Creating table
     db = Database("database.db")
@@ -167,13 +181,21 @@ def test():
 
     # Adding values to table
     print("Insert values")
-    db.insert_into_table("things", THING_NAME="Air cooler", THING_DESC="For summer")
-    db.insert_into_table("things", THING_NAME="Table", THING_DESC="Wooden and used")
+    values = {
+        "Air cooler": "For summer",
+        "Table": "Wooden and used",
+        "GNU/Linux": "Operating System",
+        "Niri": "Scrolling Window Manager",
+        "Wallpaper": "Earth",
+    }
+    for k in values:
+        db.insert_into_table("things", THING_NAME=k, THING_DESC=values[k])
 
     # Selecting from table
     print("Select from table")
     table_data = db.select_from_table("things", "THING_NAME")
-    print("Table data: ", table_data.fetchall())
+    print_select_statements(table_data)
+    print("Table data:")
 
     # Updating values from table
     print("Update table")
@@ -183,16 +205,23 @@ def test():
     # Selecting from table with WHERE condition
     print("Selecting with WHERE condition")
     where_stmt, where_data = db.prep_where_statement(THING_NAME="Wood Table")
-    # print("exmple:", where_stmt, where_data)
     table_data = db.select_from_table("things", "*", where_stmt, where_data)
-    print("Table data: ", table_data.fetchall())
+    print("Table data:")
+    print_select_statements(table_data)
+
+    # Selecting from table with WHERE condition AND 'LIMIT' AND 'ORDER'
+    print("Selecting with WHERE condition")
+    table_data = db.select_from_table("things", "*", limit=2, order_by={"ID": "DESC"})
+    print("Table data:")
+    print_select_statements(table_data)
 
     # Deleting from table
     print("Deleting from table")
     where_stmt, where_data = db.prep_where_statement(ID=2)
     db.delete_from_table("things", where_stmt, where_data)
     table_data = db.select_from_table("things", "*")
-    print("Table data: ", table_data.fetchall())
+    print("Table data:")
+    print_select_statements(table_data)
 
     # Dropping the table
     print("Dropping table")
