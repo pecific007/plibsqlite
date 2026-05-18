@@ -31,7 +31,7 @@ class Database:
             "SELECT name FROM sqlite_master WHERE type='table'"
         )
         tables = tables_full.fetchall()
-        print(tables)
+        # print(tables)
         for t in tables:
             td = (self.con.execute(f"PRAGMA table_info('{t[0]}')")).fetchall()
             new_table_fields = {
@@ -66,16 +66,14 @@ class Database:
         possible_operators = ["=", "!=", ">", ">=", "<", "<=", "LIKE", "like"]
         if operator not in possible_operators:
             print("Please provide a valid operator!")
-            return None, None
+            return "", []
         stmt = []
         data = []
         stmt.append(" WHERE ")
-        i = 0
         for k in kwargs:
             stmt.append(f"{k} {operator} ? ")
             data.append(kwargs[k])
             stmt.append(" AND ")
-            i += 1
         if stmt[(len(stmt) - 1)] == " AND ":
             stmt.pop()
         where_stmt = "".join(stmt)
