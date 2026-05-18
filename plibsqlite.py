@@ -16,16 +16,36 @@ class Table:
 
 
 class Database:
-    def __init__(self, database_name: str):
+    def __init__(self, database_name: str) -> None:
         """This will initialise the table name and the columns/fields of a table."""
         self.tables = {}
         self.con = sqlite3.connect(database_name)
+        self.sync_with_database()
 
-    def __del__(self):
+    def __del__(self) -> None:
         """This is a destructor that will close the connection (for now)"""
         self.con.close()
 
-    def create_table(self, name: str, **kwargs):
+    def sync_with_database(self) -> None:
+        tables_full = self.con.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        )
+        tables = tables_full.fetchall()
+        print(tables)
+        for t in tables:
+            td = (self.con.execute(f"PRAGMA table_info('{t[0]}')")).fetchall()
+            new_table_fields = {
+                d[1]: f"{d[2]} PRIMARY KEY"
+                if d[5] == 1
+                else d[2]
+                if d[3] == 0
+                else f"{d[2]} NOT NULL"
+                for d in td
+            }
+            new_table = Table(t[0], new_table_fields)
+            self.tables[t[0]] = new_table
+
+    def create_table(self, name: str, **kwargs) -> None:
         """This function is used to create table with the name"""
         table = Table(name, kwargs)
         stmt = []
@@ -42,13 +62,17 @@ class Database:
         self.con.execute(sql_query)
         self.tables[name] = table
 
-    def prep_where_statement(self, **kwargs):
+    def prep_where_statement(self, operator: str, **kwargs):
+        possible_operators = ["=", "!=", ">", ">=", "<", "<=", "LIKE", "like"]
+        if operator not in possible_operators:
+            print("Please provide a valid operator!")
+            return None, None
         stmt = []
         data = []
         stmt.append(" WHERE ")
         i = 0
         for k in kwargs:
-            stmt.append(f"{k} = ? ")
+            stmt.append(f"{k} {operator} ? ")
             data.append(kwargs[k])
             stmt.append(" AND ")
             i += 1
@@ -88,7 +112,6 @@ class Database:
         limit: int = 0,
         order_by: dict = {},
     ):
-        table = self.tables[table_name]
         stmt = []
         stmt.append("SELECT ")
         # This for selecting all values
@@ -102,7 +125,6 @@ class Database:
                     stmt.append(where)
                 sql_query = "".join(stmt)
             else:
-                assert columns in table.fields
                 stmt.append(columns)
                 stmt.append(f" FROM {table_name}")
                 if len(where) != 0:
@@ -134,6 +156,7 @@ class Database:
         # Empty where statement (i.e. where = "") it will drop table
         if len(where) == 0:
             stmt = f"DROP TABLE {table_name}"
+            print("Executing: ", stmt)
             self.con.execute(stmt)
             self.con.commit()
             return
