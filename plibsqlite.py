@@ -147,19 +147,10 @@ class Database:
         stmt.append("SELECT ")
         # This for selecting all values
         if isinstance(columns, str) or len(columns) == 0:
-            if columns == "*":
-                print(
-                    "Getting all the rows: Providing empty value for columns will by default select *"
-                )
-                stmt.append(f' * FROM "{table_name}"')
-                if len(where) != 0:
-                    stmt.append(where)
-                sql_query = "".join(stmt)
-            else:
-                stmt.append(columns)
-                stmt.append(f' FROM "{table_name}"')
-                if len(where) != 0:
-                    stmt.append(where)
+            stmt.append(columns)
+            stmt.append(f' FROM "{table_name}"')
+            if len(where) != 0:
+                stmt.append(where)
             if len(order_by) > 0:
                 stmt.append(" ORDER BY ")
                 for k in order_by:
@@ -233,7 +224,7 @@ class Database:
         self.con.execute(sql_query, data)
         self.con.commit()
 
-    def replace_placeholder_with_data(self, stmt: str, *args):
+    def replace_placeholder(self, stmt: str, *args):
         data = ""
         new_stmt = ""
         if self.IN_KEYWORD == args[0][0]:
