@@ -71,7 +71,7 @@ class Database:
         self.con.execute(sql_query)
         self.tables[name] = table
 
-    def prep_where_statement(self, operator: str, **kwargs):
+    def prep_where_statement(self, operator: str, **kwargs) -> tuple[str, list]:
         possible_operators = [
             "=",
             "!=",
@@ -93,7 +93,7 @@ class Database:
             data.append(self.IN_KEYWORD)
         stmt.append(" WHERE ")
         for k in kwargs:
-            stmt.append(f'"{k}" {operator} (?) ')
+            stmt.append(f"{k} {operator} (?) ")
             data.append(kwargs[k])
             stmt.append(" AND ")
         if stmt[(len(stmt) - 1)] == " AND ":
@@ -136,7 +136,8 @@ class Database:
         limit: int = 0,
         order_by: dict = {},
         ret_stmt: bool = False,
-    ):
+        join_stmt: str = "",
+    ) -> sqlite3.Cursor | str:
         stmt = []
         if data:
             if data[0] == self.IN_KEYWORD:
@@ -144,35 +145,26 @@ class Database:
                 data = data[0]
         stmt.append("SELECT ")
         # This for selecting all values
-        if isinstance(columns, str) or len(columns) == 0:
+        if isinstance(columns, str):
             stmt.append(columns)
-            stmt.append(f' FROM "{table_name}"')
-            if len(where) != 0:
-                stmt.append(where)
-            if len(order_by) > 0:
-                stmt.append(" ORDER BY ")
-                for k in order_by:
-                    stmt.append(f"{k} {order_by[k]}")
-                    stmt.append(",")
-                stmt.pop()
-            if limit != 0:
-                stmt.append(f"LIMIT {limit}")
-            sql_query = " ".join(stmt)
-            if ret_stmt:
-                return sql_query
-            print("Executing: ", sql_query, data)
-            return self.con.execute(sql_query, data)
-
-        # This for selecting values from columns
-        for k in columns:
-            stmt.append(k)
-            stmt.append(",")
-
-        stmt.pop()
-        stmt.append(f" FROM {table_name}")
-        if len(where) != 0:
+        elif isinstance(columns, list):
+            for c in columns:
+                stmt.append(f' "{c}" ')
+                stmt.append(",")
+            stmt.pop()
+        stmt.append(f' FROM "{table_name}"')
+        stmt.append(f" {join_stmt} ")
+        if where:
             stmt.append(where)
-        sql_query = "".join(stmt)
+        if len(order_by) > 0:
+            stmt.append(" ORDER BY ")
+            for k in order_by:
+                stmt.append(f"{k} {order_by[k]}")
+                stmt.append(",")
+            stmt.pop()
+        if limit != 0:
+            stmt.append(f"LIMIT {limit}")
+        sql_query = " ".join(stmt)
         if ret_stmt:
             return sql_query
         print("Executing: ", sql_query, data)
@@ -180,7 +172,7 @@ class Database:
 
     def delete_from_table(
         self, table_name: str, where: str = "", data: list = [], ret_stmt: bool = False
-    ):
+    ) -> None | str:
         """This function will delete from table."""
         # Empty where statement (i.e. where = "") it will drop table
         if len(where) == 0:
@@ -201,7 +193,7 @@ class Database:
 
     def update_column_table(
         self, table_name: str, where: str, data: list, ret_stmt: bool = False, **kwargs
-    ):
+    ) -> None | str:
         """Updating a column, WHERE statement is necessary"""
         stmt = []
         cols = []
@@ -217,12 +209,21 @@ class Database:
         stmt.append(where)
         sql_query = "".join(stmt)
         if ret_stmt:
-            return stmt
+            return sql_query
         print("Executing: ", sql_query, data)
         self.con.execute(sql_query, data)
         self.con.commit()
 
-    def replace_placeholder(self, stmt: str, *args):
+    def join_tables(self, table_name: str, operator: str, expr: dict) -> str:
+        stmt = []
+        stmt.append(f' JOIN "{table_name}" ON ')
+        for e in expr:
+            stmt.append(f"{e} {operator} {expr[e]}")
+            stmt.append(" AND ")
+        stmt.pop()
+        return "".join(stmt)
+
+    def replace_placeholder(self, stmt: str, *args) -> str:
         data = ""
         new_stmt = ""
         if self.IN_KEYWORD == args[0][0]:
