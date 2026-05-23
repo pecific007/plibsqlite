@@ -90,6 +90,7 @@ class Database:
         order_by: dict = {},
         limit: str | int = "",
     ) -> Self:
+        """This method will return data from the server"""
         stmt = []
         stmt.append("SELECT")
         if isinstance(columns, str):
@@ -111,24 +112,40 @@ class Database:
         self.add_to_stmt(stmt)
         return self
 
-    def where(self, operators: str | list, **kwargs: Any) -> Self:
+    def where(self, operators: str | list, vals: dict[Any, Any]) -> Self:
+        """This method will add a where condition to the statement"""
         stmt = []
         params = []
         stmt.append("WHERE")
         if isinstance(operators, str):
-            for k in kwargs:
-                stmt.append(f"{k} {operators} ?")
+            for v in vals:
+                stmt.append(f"{v} {operators} ?")
                 stmt.append("AND")
-                params.append(kwargs[k])
+                params.append(vals[v])
             stmt.pop()
         elif isinstance(operators, list):
             i = 0
-            for k in kwargs:
-                stmt.append(f"{k} {operators[i]} ?")
-                params.append(kwargs[k])
+            for v in vals:
+                stmt.append(f"{v} {operators[i]} ?")
+                params.append(vals[v])
                 i += 0
         self.add_to_stmt(stmt)
         self.add_to_params(params)
+        return self
+
+    def join(self, table_name: str, operators: str | list, on: dict) -> Self:
+        stmt = []
+        stmt.append(f'JOIN "{table_name}" ON')
+        i = 0
+        if isinstance(operators, str):
+            for o in on:
+                stmt.append(f"{o} {operators} {on[o]}")
+        if isinstance(operators, list):
+            for o in on:
+                stmt.append(f"{o} {operators[i]} {on[o]}")
+                i += 0
+
+        self.add_to_stmt(stmt)
         return self
 
     """
