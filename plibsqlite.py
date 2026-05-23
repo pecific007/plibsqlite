@@ -1,10 +1,15 @@
 import sqlite3
+from typing import Any, Self
 
-"""
-
-THIS MODULE PROVIDES BASIC C.U.R.D. FUNCTIONALITIES
-
-"""
+###############################################################
+# """"""""""""""""""""""""""""""""""""""""""""""""""""""""""" #
+# """"""""""""""""""""""""""""""""""""""""""""""""""""""""""" #
+# "                                                         " #
+""""" THIS MODULE PROVIDES BASIC C.U.R.D. FUNCTIONALITIES """ ""
+# "                                                         " #
+# """"""""""""""""""""""""""""""""""""""""""""""""""""""""""" #
+# """"""""""""""""""""""""""""""""""""""""""""""""""""""""""" #
+###############################################################
 
 
 class Table:
@@ -14,226 +19,126 @@ class Table:
 
 
 class Database:
-    def __init__(self, database_name: str) -> None:
-        """This will initialise the table name and the columns/fields of a table."""
-        self.tables = {}
-        self.con = sqlite3.connect(database_name)
-        self.IN_KEYWORD = "FOUND 'IN' OPERATOR"
-        self.sync_with_database()
+    stmt: str  # The statement
+    params: list  # Parameters
+    tables: dict[str, object]  # The name of table
+    con: sqlite3.Connection  # Connectino with the database
 
-    def __del__(self) -> None:
-        """This is a destructor that will close the connection (for now)"""
+    def __init__(self, database_name) -> None:
+        global connection
+        self.database_name = database_name
+        self.tables = {}
+        self.stmt = ""
+        self.params = []
+        self.con = sqlite3.connect(self.database_name)
+        # self.sync_with_database()
+
+    def __del__(self):
+        self.disconnect()
+
+    def disconnect(self) -> None:
+        """This method is used to disconnect from the database"""
         self.con.close()
 
-    def exec(self, stmt: str, params: list = []) -> sqlite3.Cursor:
+    def create_table(self, table_name: str, **kwargs: Any) -> Self:
+        """This method will create a table in the database"""
+        table = Table(table_name, kwargs)
+        stmt = []
+        stmt.append(f'CREATE TABLE IF NOT EXISTS "{table_name}"(')
+        for f in kwargs:
+            stmt.append(f'"{f}" {kwargs[f]}')
+            stmt.append(",")
+        stmt.pop()
+        stmt.append(")")
+        self.stmt += "".join(stmt)
+        self.tables[table_name] = table
+        return self
+
+    def exec(self) -> sqlite3.Cursor:
+        """This method is used to execute the built query"""
+        stmt = self.stmt
+        params = self.params
+        self.stmt = ""
+        self.params = []
         print("Executing: ", stmt, params)
         return self.con.execute(stmt, params)
 
-    def sync_with_database(self) -> None:
-        where_stmt, where_data = self.prep_where_statement("=", type="table")
-        tables_full = self.select_from_table(
-            "sqlite_master", "name", where_stmt, where_data
-        )
-        tables = tables_full.fetchall()
-        # print(tables)
-        for t in tables:
-            td = (self.con.execute(f"PRAGMA table_info('{t[0]}')")).fetchall()
-            # for d in td:
-            #     print(d)
-            new_table_fields = {
-                d[1]: f"{d[2]} PRIMARY KEY"
-                if d[5] == 1
-                else d[2]
-                if d[3] == 0
-                else f"{d[2]} NOT NULL"
-                for d in td
-            }
-            # print(new_table_fields)
-            new_table = Table(t[0], new_table_fields)
-            self.tables[t[0]] = new_table
-
-    def create_table(self, name: str, ret_stmt: bool = False, **kwargs) -> None | str:
-        """This function is used to create table with the name"""
-        table = Table(name, kwargs)
+    def insert(self, table_name: str, **kwargs: Any) -> Self:
+        """This method will insert values in the table"""
         stmt = []
-        stmt.append(f'CREATE TABLE IF NOT EXISTS "{name}"(')
-        for f in kwargs:
-            stmt += f'"{f}" "{kwargs[f]}"'
-            stmt.append(",")
-
-        # All the pops are mostly to remove the "," at the last element Otherwise it thorws an error
-        stmt.pop()
-        stmt.append(")")
-        sql_query = "".join(stmt)
-        if ret_stmt:
-            return sql_query
-        print("Executing: ", sql_query)
-        self.con.execute(sql_query)
-        self.tables[name] = table
-
-    def prep_where_statement(self, operator: str, **kwargs) -> tuple[str, list]:
-        possible_operators = [
-            "=",
-            "!=",
-            ">",
-            ">=",
-            "<",
-            "<=",
-            "LIKE",
-            "like",
-            "IN",
-            "in",
-        ]
-        if operator not in possible_operators:
-            print("Please provide a valid operator!")
-            return "", []
-        stmt = []
-        data = []
-        if operator == "IN" or operator == "in":
-            data.append(self.IN_KEYWORD)
-        stmt.append(" WHERE ")
+        params = []
+        stmt.append(f'INSERT INTO "{table_name}" (')
         for k in kwargs:
-            stmt.append(f"{k} {operator} (?) ")
-            data.append(kwargs[k])
-            stmt.append(" AND ")
-        if stmt[(len(stmt) - 1)] == " AND ":
-            stmt.pop()
-        where_stmt = "".join(stmt)
-        return where_stmt, data
-
-    def insert_into_table(
-        self, table_name: str, ret_stmt: bool = False, **kwargs
-    ) -> None | str:
-        stmt = []  # This is the sql query statement -- easy to prepare this way
-        data = []  # This to store data
-        stmt.append(f'INSERT INTO "{table_name}"(')
-        for f in kwargs:  # This to get all the column names
-            stmt.append(f'"{f}"')
+            stmt.append(f'"{k}"')
             stmt.append(",")
         stmt.pop()
-        stmt.append(")")
-
-        stmt.append(" VALUES(")
-        for k in kwargs:  # This to get the values
-            stmt.append("(?)")
+        stmt.append(") VALUES (")
+        for k in kwargs:
+            stmt.append("?")
             stmt.append(",")
-            data.append(kwargs[k])
+            params.append(kwargs[k])
         stmt.pop()
         stmt.append(")")
-        sql_query = "".join(stmt)
-        if ret_stmt:
-            return sql_query
-        print("Executing: ", sql_query, data)
-        self.con.execute(sql_query, data)
-        self.con.commit()
+        self.add_to_stmt(stmt)
+        self.add_to_params(params)
+        return self
 
-    def select_from_table(
+    def select(
         self,
         table_name: str,
         columns: list | str,
-        where: str = "",
-        data: list = [],
-        limit: int = 0,
         order_by: dict = {},
-        ret_stmt: bool = False,
-        join_stmt: str = "",
-    ) -> sqlite3.Cursor | str:
+        limit: str | int = "",
+    ) -> Self:
         stmt = []
-        if data:
-            if data[0] == self.IN_KEYWORD:
-                data = data[1:]
-                data = data[0]
-        stmt.append("SELECT ")
-        # This for selecting all values
+        stmt.append("SELECT")
         if isinstance(columns, str):
             stmt.append(columns)
         elif isinstance(columns, list):
             for c in columns:
-                stmt.append(f' "{c}" ')
+                stmt.append(f'"{c}"')
                 stmt.append(",")
             stmt.pop()
-        stmt.append(f' FROM "{table_name}"')
-        stmt.append(f" {join_stmt} ")
-        if where:
-            stmt.append(where)
-        if len(order_by) > 0:
-            stmt.append(" ORDER BY ")
-            for k in order_by:
-                stmt.append(f"{k} {order_by[k]}")
+        stmt.append(f'FROM "{table_name}"')
+        if order_by:
+            stmt.append("ORDER BY")
+            for o in order_by:
+                stmt.append(f"{o} {order_by[o]}")
                 stmt.append(",")
             stmt.pop()
-        if limit != 0:
+        if limit:
             stmt.append(f"LIMIT {limit}")
-        sql_query = " ".join(stmt)
-        if ret_stmt:
-            return sql_query
-        print("Executing: ", sql_query, data)
-        return self.con.execute(sql_query, data)
+        self.add_to_stmt(stmt)
+        return self
 
-    def delete_from_table(
-        self, table_name: str, where: str = "", data: list = [], ret_stmt: bool = False
-    ) -> None | str:
-        """This function will delete from table."""
-        # Empty where statement (i.e. where = "") it will drop table
-        if len(where) == 0:
-            stmt = f"DROP TABLE {table_name}"
-            if ret_stmt:
-                return stmt
-            print("Executing: ", stmt)
-            self.con.execute(stmt)
-            self.con.commit()
-            return
-
-        stmt = f'DELETE FROM "{table_name}" {where}'
-        if ret_stmt:
-            return stmt
-        print("Executing: ", stmt, data)
-        self.con.execute(stmt, data)
-        self.con.commit()
-
-    def update_column_table(
-        self, table_name: str, where: str, data: list, ret_stmt: bool = False, **kwargs
-    ) -> None | str:
-        """Updating a column, WHERE statement is necessary"""
+    def where(self, operators: str | list, **kwargs: Any) -> Self:
         stmt = []
-        cols = []
-        stmt.append(f"UPDATE {table_name} SET ")
-        for k in kwargs:
-            stmt.append(f"{k} = ?")
-            stmt.append(",")
-            cols.append(kwargs[k])
-        i = 0
-        for c in cols:
-            data.insert(i, c)
-        stmt.pop()
-        stmt.append(where)
-        sql_query = "".join(stmt)
-        if ret_stmt:
-            return sql_query
-        print("Executing: ", sql_query, data)
-        self.con.execute(sql_query, data)
-        self.con.commit()
+        params = []
+        stmt.append("WHERE")
+        if isinstance(operators, str):
+            for k in kwargs:
+                stmt.append(f"{k} {operators} ?")
+                stmt.append("AND")
+                params.append(kwargs[k])
+            stmt.pop()
+        elif isinstance(operators, list):
+            i = 0
+            for k in kwargs:
+                stmt.append(f"{k} {operators[i]} ?")
+                params.append(kwargs[k])
+                i += 0
+        self.add_to_stmt(stmt)
+        self.add_to_params(params)
+        return self
 
-    def join_tables(self, table_name: str, operator: str, expr: dict) -> str:
-        stmt = []
-        stmt.append(f' JOIN "{table_name}" ON ')
-        for e in expr:
-            stmt.append(f"{e} {operator} {expr[e]}")
-            stmt.append(" AND ")
-        stmt.pop()
-        return "".join(stmt)
+    """
+    Helper Functions:
+    """
 
-    def replace_placeholder(self, stmt: str, *args) -> str:
-        data = ""
-        new_stmt = ""
-        if self.IN_KEYWORD == args[0][0]:
-            data = args[0][1:]
-        else:
-            data = args[0]
-        i = 0
-        for s in stmt:
-            if s == "?":
-                s = data[i]
-                i += 1
-            new_stmt += f"{s}"
-        return new_stmt
+    def add_to_stmt(self, pre_stmt: list) -> None:
+        self.stmt += " "
+        self.stmt += " ".join(pre_stmt)
+
+    def add_to_params(self, params: list) -> None:
+        for p in params:
+            self.params.append(p)
