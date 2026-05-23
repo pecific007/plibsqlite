@@ -11,6 +11,10 @@ def print_select_statements(data):
 db = sql.Database("database.db")
 
 
+def get_schema():
+    db.schema()
+
+
 def test__create_table(name: str) -> None:
     # Creating table
     print("Create table")
@@ -88,6 +92,7 @@ def test__drop_table(name: str):
 
 
 if __name__ == "__main__":
+    get_schema()
     test__create_table("first")
     test__insert_values("first")
     test__select_values("first")
@@ -99,3 +104,4 @@ if __name__ == "__main__":
     test__update_table("second")
     test__delete_from_table("second")
     test__drop_table("second")
+    test__drop_table("first")

@@ -13,6 +13,9 @@ from typing import Any, Self
 
 
 class Table:
+    name: str
+    fields: dict
+
     def __init__(self, name: str, fields: dict) -> None:
         self.name = name
         self.fields = fields
@@ -21,7 +24,7 @@ class Table:
 class Database:
     stmt: str  # The statement
     params: list  # Parameters
-    tables: dict[str, object]  # The name of table
+    tables: dict[str, Table]  # The name of table
     con: sqlite3.Connection  # Connectino with the database
 
     def __init__(self, database_name) -> None:
@@ -31,6 +34,7 @@ class Database:
         self.stmt = ""
         self.params = []
         self.con = sqlite3.connect(self.database_name)
+        self.sync()
         # self.sync_with_database()
 
     def __del__(self):
@@ -40,8 +44,35 @@ class Database:
         """This method is used to disconnect from the database"""
         self.con.close()
 
+    def sync(self) -> None:
+        tables_full = (
+            self.select("sqlite_master", "name")
+            .where("=", vals={"type": "table"})
+            .exec()
+        )
+        tables = tables_full.fetchall()
+        for t in tables:
+            td = (self.exec(f"PRAGMA table_info('{t[0]}')")).fetchall()
+            new_table_fields = {
+                d[1]: f"{d[2]} PRIMARY KEY"
+                if d[5] == 1
+                else d[2]
+                if d[3] == 0
+                else f"{d[2]} NOT NULL"
+                for d in td
+            }
+            new_table = Table(t[0], new_table_fields)
+            self.tables[t[0]] = new_table
+        return
+
+    def schema(self) -> None:
+        print("Schema:")
+        for t in self.tables:
+            print(self.tables[t].name, self.tables[t].fields)
+
     def create_table(self, table_name: str, **kwargs: Any) -> Self:
         """This method will create a table in the database"""
+        """ Unlike other methdos, this will by default execute statements """
         table = Table(table_name, kwargs)
         stmt = []
         stmt.append(f"CREATE TABLE IF NOT EXISTS {table_name}(")
@@ -50,7 +81,8 @@ class Database:
             stmt.append(",")
         stmt.pop()
         stmt.append(")")
-        self.stmt += "".join(stmt)
+        self.add_to_stmt(stmt)
+        self.exec(self.stmt)
         self.tables[table_name] = table
         return self
 
@@ -187,9 +219,10 @@ class Database:
         self.where(operators, vals)
         return self
 
-    def drop(self, table_name: str) -> None:
+    def drop(self, table_name: str) -> Self:
+        """Unlike other methdos, this will just execute the statement"""
         self.exec(f"DROP TABLE {table_name}")
-        return
+        return self
 
     """
     Helper Functions:
