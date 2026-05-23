@@ -60,15 +60,31 @@ def test__select_with_order_by_and_limit(name: str):
     print_select_statements(table_data)
 
 
+def test__update_table(name: str):
+    print("Updating columns")
+    db.update(name, "=", vals={"name": "Wood Table"}, where={"id": 2}).exec()
+    table_data = db.select(name, "*").where("=", {"name": "Wood Table"}).exec()
+    print("Table data:")
+    print_select_statements(table_data)
+
+
 def test__join_tables(table1: str, table2: str):
     # Selecting from multiple tables using join
-    data = (
+    table_data = (
         db.select(table1, "*")
         .join(table2, operators="=", on={f"{table1}.id": f"{table2}.id"})
         .exec()
     )
-    print(data.fetchall())
-    pass
+    print("Table data:")
+    print_select_statements(table_data)
+
+
+def test__delete_from_table(name: str):
+    db.delete(name, "=", vals={"id": 2}).exec()
+
+
+def test__drop_table(name: str):
+    db.drop(name)
 
 
 if __name__ == "__main__":
@@ -80,3 +96,6 @@ if __name__ == "__main__":
     test__create_table("second")
     test__insert_values("second")
     test__join_tables("first", "second")
+    test__update_table("second")
+    test__delete_from_table("second")
+    test__drop_table("second")

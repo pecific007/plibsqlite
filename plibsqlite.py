@@ -44,9 +44,9 @@ class Database:
         """This method will create a table in the database"""
         table = Table(table_name, kwargs)
         stmt = []
-        stmt.append(f'CREATE TABLE IF NOT EXISTS "{table_name}"(')
+        stmt.append(f"CREATE TABLE IF NOT EXISTS {table_name}(")
         for f in kwargs:
-            stmt.append(f'"{f}" {kwargs[f]}')
+            stmt.append(f"{f} {kwargs[f]}")
             stmt.append(",")
         stmt.pop()
         stmt.append(")")
@@ -54,14 +54,19 @@ class Database:
         self.tables[table_name] = table
         return self
 
-    def exec(self) -> sqlite3.Cursor:
+    def exec(self, stmt: str = "", params: list | tuple = []) -> sqlite3.Cursor:
         """This method is used to execute the built query"""
+        if len(stmt) > 0:
+            print("Executing: ", stmt, params)
+            return self.con.execute(stmt, params)
         stmt = self.stmt
         params = self.params
         self.stmt = ""
         self.params = []
         print("Executing: ", stmt, params)
-        return self.con.execute(stmt, params)
+        cursor = self.con.execute(stmt, params)
+        self.con.commit()
+        return cursor
 
     def insert(self, table_name: str, **kwargs: Any) -> Self:
         """This method will insert values in the table"""
@@ -134,19 +139,57 @@ class Database:
         return self
 
     def join(self, table_name: str, operators: str | list, on: dict) -> Self:
+        """This method is used to join tables"""
         stmt = []
         stmt.append(f'JOIN "{table_name}" ON')
         i = 0
         if isinstance(operators, str):
             for o in on:
                 stmt.append(f"{o} {operators} {on[o]}")
-        if isinstance(operators, list):
+        elif isinstance(operators, list):
             for o in on:
                 stmt.append(f"{o} {operators[i]} {on[o]}")
                 i += 0
-
         self.add_to_stmt(stmt)
         return self
+
+    def update(
+        self, table_name: str, operators: str | list, vals: dict, where: dict
+    ) -> Self:
+        """This method is used to update any values in a table"""
+        stmt = []
+        params = []
+        stmt.append(f'UPDATE "{table_name}" SET')
+        i = 0
+        if isinstance(operators, str):
+            for v in vals:
+                stmt.append(f"{v} {operators} ?")
+                params.append(vals[v])
+        elif isinstance(operators, list):
+            for v in vals:
+                stmt.append(f"{v} {operators[i]} ?")
+                params.append(vals[v])
+                i += 0
+        self.add_to_stmt(stmt)
+        self.add_to_params(params)
+        self.where(operators, where)
+        return self
+
+    def delete(
+        self,
+        table_name: str,
+        operators: str | list,
+        vals: dict[Any, Any],
+    ) -> Self:
+        stmt = []
+        stmt.append(f"DELETE FROM {table_name}")
+        self.add_to_stmt(stmt)
+        self.where(operators, vals)
+        return self
+
+    def drop(self, table_name: str) -> None:
+        self.exec(f"DROP TABLE {table_name}")
+        return
 
     """
     Helper Functions:
@@ -155,7 +198,9 @@ class Database:
     def add_to_stmt(self, pre_stmt: list) -> None:
         self.stmt += " "
         self.stmt += " ".join(pre_stmt)
+        return
 
     def add_to_params(self, params: list) -> None:
         for p in params:
             self.params.append(p)
+        return
