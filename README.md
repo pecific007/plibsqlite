@@ -13,7 +13,7 @@ Here is a quick example of how to use this library. The usage of all the functio
 from plibsqlite import Database
 
 db = Database("database.db")
-users = db.select("*", "users").where("=", {"is_active": "1"})
+users = db.select("*", "users").where("=", {"is_active": "1"}).exec()
 print(users)
 ```
 > Output:
