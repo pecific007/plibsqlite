@@ -23,7 +23,7 @@ def test__create_table(name: str) -> None:
         id="INTEGER PRIMARY KEY",
         name="TEXT NOT NULL",
         desc="TEXT NOT NULL",
-    ).exec()
+    )
 
 
 def test__insert_values(name: str):
@@ -43,7 +43,7 @@ def test__insert_values(name: str):
 def test__select_values(name: str):
     # Selecting from table
     print("Select from table")
-    table_data = db.select(name, "name").exec()
+    table_data = db.select("name", name).exec()
     print("Table data:")
     print_select_statements(table_data)
 
@@ -51,15 +51,15 @@ def test__select_values(name: str):
 def test__select_with_where_condition(name: str):
     # Selecting from table with WHERE condition
     print("Selecting with WHERE condition")
-    table_data = db.select(name, "*").where("=", vals={"name": "Table"}).exec()
+    table_data = db.select("*", name).where("=", vals={"name": "Table"}).exec()
     print("Table data:")
     print_select_statements(table_data)
 
 
 def test__select_with_order_by_and_limit(name: str):
     # Selecting from table with 'LIMIT' AND 'ORDER'
-    print("Selecting with WHERE condition")
-    table_data = db.select(name, "*", limit=2, order_by={"ID": "DESC"}).exec()
+    print("Selecting with ORDER BY and LIMIT")
+    table_data = db.select("*", name).order_by({"id": "DESC"}).limit(2).exec()
     print("Table data:")
     print_select_statements(table_data)
 
@@ -67,7 +67,7 @@ def test__select_with_order_by_and_limit(name: str):
 def test__update_table(name: str):
     print("Updating columns")
     db.update(name, "=", vals={"name": "Wood Table"}, where={"id": 2}).exec()
-    table_data = db.select(name, "*").where("=", {"name": "Wood Table"}).exec()
+    table_data = db.select("*", name).where("=", {"name": "Wood Table"}).exec()
     print("Table data:")
     print_select_statements(table_data)
 
@@ -75,7 +75,7 @@ def test__update_table(name: str):
 def test__join_tables(table1: str, table2: str):
     # Selecting from multiple tables using join
     table_data = (
-        db.select(table1, "*")
+        db.select("*", table1)
         .join(table2, operators="=", on={f"{table1}.id": f"{table2}.id"})
         .exec()
     )
