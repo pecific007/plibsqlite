@@ -251,7 +251,8 @@ class Database:
     """
 
     def add_to_stmt(self, pre_stmt: list) -> None:
-        self.stmt += " "
+        if len(self.stmt) > 0:
+            self.stmt += " "
         self.stmt += " ".join(pre_stmt)
         return
 
