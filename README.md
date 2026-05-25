@@ -4,6 +4,7 @@
 - This can perform basic C.U.R.D with some convenient functions.
 - It is possible to make some advance statements.
 - I made this to use this on my small scale projects.
+- It can complete CS50's SQLite problemsets.
 
 ## Example
 
