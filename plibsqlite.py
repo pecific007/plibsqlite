@@ -199,12 +199,15 @@ class Database:
         if isinstance(operators, str):
             for v in vals:
                 stmt.append(f"{v} {operators} ?")
+                stmt.append(",")
                 params.append(vals[v])
         elif isinstance(operators, list):
             for v in vals:
                 stmt.append(f"{v} {operators[i]} ?")
+                stmt.append(",")
                 params.append(vals[v])
                 i += 0
+        stmt.pop()
         self.__add_to_stmt(stmt)
         self.__add_to_params(params)
         self.where(operators, where)
