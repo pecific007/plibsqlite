@@ -76,7 +76,7 @@ class Database:
             stmt.append(",")
         stmt.pop()
         stmt.append(")")
-        self.add_to_stmt(stmt)
+        self.__add_to_stmt(stmt)
         self.exec(self.stmt)
         self.tables[table_name] = table
         return self
@@ -115,8 +115,8 @@ class Database:
             params.append(kwargs[k])
         stmt.pop()
         stmt.append(")")
-        self.add_to_stmt(stmt)
-        self.add_to_params(params)
+        self.__add_to_stmt(stmt)
+        self.__add_to_params(params)
         return self
 
     def select(
@@ -135,7 +135,7 @@ class Database:
                 stmt.append(",")
             stmt.pop()
         stmt.append(f'FROM "{table_name}"')
-        self.add_to_stmt(stmt)
+        self.__add_to_stmt(stmt)
         return self
 
     def order_by(self, by: str | dict[Any, Any]) -> Self:
@@ -148,7 +148,7 @@ class Database:
                 stmt.append(f"{b} {by[b]}")
                 stmt.append(",")
             stmt.pop()
-        self.add_to_stmt(stmt)
+        self.__add_to_stmt(stmt)
         return self
 
     def limit(self, limit: Any) -> Self:
@@ -157,9 +157,97 @@ class Database:
 
     def where(self, operators: str | list[Any], vals: str | dict[Any, Any]) -> Self:
         """This method will add a where condition to the statement"""
+        self.stmt += " WHERE"
+        self.__condition_logic(operators, vals)
+        return self
+
+    def condition(
+        self, type_of: str, operators: str | list[Any], vals: str | dict[Any, Any]
+    ) -> Self:
+        """This method will add a specified type condition to the statement"""
+        self.stmt += f" {type_of}"
+        self.__condition_logic(operators, vals)
+        return self
+
+    def out(self) -> Self:
+        self.stmt += " )"
+        return self
+
+    def join(self, table_name: str, operators: str | list, on: dict) -> Self:
+        """This method is used to join tables"""
+        stmt = []
+        stmt.append(f'JOIN "{table_name}" ON')
+        i = 0
+        if isinstance(operators, str):
+            for o in on:
+                stmt.append(f"{o} {operators} {on[o]}")
+        elif isinstance(operators, list):
+            for o in on:
+                stmt.append(f"{o} {operators[i]} {on[o]}")
+                i += 0
+        self.__add_to_stmt(stmt)
+        return self
+
+    def update(
+        self, table_name: str, operators: str | list, vals: dict, where: dict
+    ) -> Self:
+        """This method is used to update any values in a table"""
         stmt = []
         params = []
-        stmt.append("WHERE")
+        stmt.append(f'UPDATE "{table_name}" SET')
+        i = 0
+        if isinstance(operators, str):
+            for v in vals:
+                stmt.append(f"{v} {operators} ?")
+                params.append(vals[v])
+        elif isinstance(operators, list):
+            for v in vals:
+                stmt.append(f"{v} {operators[i]} ?")
+                params.append(vals[v])
+                i += 0
+        self.__add_to_stmt(stmt)
+        self.__add_to_params(params)
+        self.where(operators, where)
+        return self
+
+    def delete(
+        self,
+        table_name: str,
+        operators: str | list,
+        vals: dict[Any, Any],
+    ) -> Self:
+        """This method will delete a row from the table"""
+        stmt = []
+        stmt.append(f"DELETE FROM {table_name}")
+        self.__add_to_stmt(stmt)
+        self.where(operators, vals)
+        return self
+
+    def drop(self, table_name: str) -> Self:
+        """Unlike other methdos, this will just execute the statement"""
+        self.exec(f"DROP TABLE {table_name}")
+        return self
+
+    """
+    Helper Functions:
+    """
+
+    def __add_to_stmt(self, pre_stmt: list) -> None:
+        if len(self.stmt) > 0:
+            self.stmt += " "
+        self.stmt += " ".join(pre_stmt)
+        return
+
+    def __add_to_params(self, params: list) -> None:
+        for p in params:
+            self.params.append(p)
+        return
+
+    def __condition_logic(
+        self, operators: str | list[Any], vals: str | dict[Any, Any]
+    ) -> None:
+        stmt = []
+        params = []
         if isinstance(vals, str):
             stmt.append(f" {vals} IN (")
         else:
@@ -180,79 +268,6 @@ class Database:
                     params.append(vals[v])
                     i += 0
             stmt.pop()
-        self.add_to_stmt(stmt)
-        self.add_to_params(params)
-        return self
-
-    def out(self) -> Self:
-        self.stmt += " )"
-        return self
-
-    def join(self, table_name: str, operators: str | list, on: dict) -> Self:
-        """This method is used to join tables"""
-        stmt = []
-        stmt.append(f'JOIN "{table_name}" ON')
-        i = 0
-        if isinstance(operators, str):
-            for o in on:
-                stmt.append(f"{o} {operators} {on[o]}")
-        elif isinstance(operators, list):
-            for o in on:
-                stmt.append(f"{o} {operators[i]} {on[o]}")
-                i += 0
-        self.add_to_stmt(stmt)
-        return self
-
-    def update(
-        self, table_name: str, operators: str | list, vals: dict, where: dict
-    ) -> Self:
-        """This method is used to update any values in a table"""
-        stmt = []
-        params = []
-        stmt.append(f'UPDATE "{table_name}" SET')
-        i = 0
-        if isinstance(operators, str):
-            for v in vals:
-                stmt.append(f"{v} {operators} ?")
-                params.append(vals[v])
-        elif isinstance(operators, list):
-            for v in vals:
-                stmt.append(f"{v} {operators[i]} ?")
-                params.append(vals[v])
-                i += 0
-        self.add_to_stmt(stmt)
-        self.add_to_params(params)
-        self.where(operators, where)
-        return self
-
-    def delete(
-        self,
-        table_name: str,
-        operators: str | list,
-        vals: dict[Any, Any],
-    ) -> Self:
-        stmt = []
-        stmt.append(f"DELETE FROM {table_name}")
-        self.add_to_stmt(stmt)
-        self.where(operators, vals)
-        return self
-
-    def drop(self, table_name: str) -> Self:
-        """Unlike other methdos, this will just execute the statement"""
-        self.exec(f"DROP TABLE {table_name}")
-        return self
-
-    """
-    Helper Functions:
-    """
-
-    def add_to_stmt(self, pre_stmt: list) -> None:
-        if len(self.stmt) > 0:
-            self.stmt += " "
-        self.stmt += " ".join(pre_stmt)
-        return
-
-    def add_to_params(self, params: list) -> None:
-        for p in params:
-            self.params.append(p)
+        self.__add_to_stmt(stmt)
+        self.__add_to_params(params)
         return
