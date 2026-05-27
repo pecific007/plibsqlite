@@ -21,10 +21,10 @@ class Database:
     stmt: str  # The statement
     params: list[Any]  # Parameters
     tables: dict[str, Table]  # The names of tables
+    database_name: str  # The name of the database
     con: sqlite3.Connection  # Connection with the database
 
     def __init__(self, database_name) -> None:
-        global connection
         self.database_name = database_name
         self.tables = {}
         self.stmt = ""
@@ -67,7 +67,7 @@ class Database:
 
     def create_table(self, table_name: str, **kwargs: Any) -> Self:
         """This method will create a table in the database"""
-        """ Unlike other methdos, this will by default execute statements """
+        """ Unlike other methods, this will by default execute statements """
         table = Table(table_name, kwargs)
         stmt = []
         stmt.append(f"CREATE TABLE IF NOT EXISTS {table_name}(")
@@ -227,7 +227,7 @@ class Database:
         return self
 
     def drop(self, table_name: str) -> Self:
-        """Unlike other methdos, this will just execute the statement"""
+        """Unlike other methods, this will just execute the statement"""
         self.exec(f"DROP TABLE {table_name}")
         return self
 
