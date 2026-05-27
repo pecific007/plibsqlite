@@ -254,22 +254,14 @@ class Database:
         if isinstance(vals, str):
             stmt.append(f" {vals} IN (")
         else:
-            if isinstance(operators, str):
-                for v in vals:
-                    stmt.append(v)
-                    stmt.append(operators)
-                    stmt.append("?")
-                    stmt.append("AND")
-                    params.append(vals[v])
-            elif isinstance(operators, list):
-                i = 0
-                for v in vals:
-                    stmt.append(v)
-                    stmt.append(operators[i])
-                    stmt.append("?")
-                    stmt.append("AND")
-                    params.append(vals[v])
-                    i += 0
+            i = 0
+            for v in vals:
+                stmt.append(v)
+                stmt.append(operators if isinstance(operators, str) else operators[i])
+                stmt.append("?")
+                stmt.append("AND")
+                params.append(vals[v])
+                i += 0
             stmt.pop()
         self.__add_to_stmt(stmt)
         self.__add_to_params(params)
