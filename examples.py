@@ -36,7 +36,12 @@ def example__insert_values(name: str) -> None:
         "Cooler": "For summer",
         "Table": "Wooden and used",
         "GNU/Linux": "Operating System",
-        "Niri": "Scrolling Window Manager",
+        "Windows": "Operating System",
+        "MacOS": "Operating System",
+        "Niri": "Window Manager",
+        "Hyprland": "Window Manager",
+        "DWM": "Window Manager",
+        "AwesomeWM": "Window Manager",
         "Wallpaper": "Earth",
     }
     for k in values:
@@ -66,6 +71,15 @@ def example__select_with_order_by_and_limit(name: str) -> None:
     # Selecting from table with 'LIMIT' AND 'ORDER'
     print("Selecting with ORDER BY and LIMIT")
     table_data = db.select("*", name).order_by({"id": "DESC"}).limit(2).exec()
+    print("Table data:")
+    print_select_statements(table_data)
+    return
+
+
+def example__select_with_group_by(name: str) -> None:
+    # Selecting from table
+    print("Select from table")
+    table_data = db.select("name", name).group_by("desc").exec()
     print("Table data:")
     print_select_statements(table_data)
     return
@@ -131,17 +145,34 @@ def example__drop_table(name: str) -> None:
 
 if __name__ == "__main__":
     get_schema()
+    print()
     example__create_table("first")
+    print()
     example__insert_values("first")
+    print()
     example__select_values("first")
+    print()
     example__select_with_where_condition("first")
+    print()
     example__select_with_order_by_and_limit("first")
+    print()
+    example__select_with_group_by("first")
+    print()
     example__create_table("second")
+    print()
     example__insert_values("second")
+    print()
     example__select_with_where_in_condition("first", "second")
+    print()
     example__select_using_condition_method("second")
+    print()
     example__join_tables("first", "second")
+    print()
     example__update_table("second")
+    print()
     example__delete_from_table("second")
+    print()
     example__drop_table("second")
+    print()
     example__drop_table("first")
+    print()

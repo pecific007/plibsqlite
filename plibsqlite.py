@@ -155,6 +155,10 @@ class Database:
         self.__add_to_stmt(stmt)
         return self
 
+    def group_by(self, by: str) -> Self:
+        self.stmt += f' GROUP BY "{by}"'
+        return self
+
     def limit(self, limit: Any) -> Self:
         self.stmt += f" LIMIT {limit}"
         return self
