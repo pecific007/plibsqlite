@@ -186,13 +186,11 @@ class Database:
         stmt = []
         stmt.append(f'JOIN "{table_name}" ON')
         i = 0
-        if isinstance(operators, str):
-            for o in on:
-                stmt.append(f"{o} {operators} {on[o]}")
-        elif isinstance(operators, list):
-            for o in on:
-                stmt.append(f"{o} {operators[i]} {on[o]}")
-                i += 0
+        for o in on:
+            stmt.append(
+                f"{o} {operators if isinstance(operators, str) else operators[i]} {on[o]}"
+            )
+            i += 0
         self.__add_to_stmt(stmt)
         return self
 
@@ -204,17 +202,13 @@ class Database:
         params = []
         stmt.append(f'UPDATE "{table_name}" SET')
         i = 0
-        if isinstance(operators, str):
-            for v in vals:
-                stmt.append(f"{v} {operators} ?")
-                stmt.append(",")
-                params.append(vals[v])
-        elif isinstance(operators, list):
-            for v in vals:
-                stmt.append(f"{v} {operators[i]} ?")
-                stmt.append(",")
-                params.append(vals[v])
-                i += 0
+        for v in vals:
+            stmt.append(
+                f"{v} {operators if isinstance(operators, str) else operators[i]} ?"
+            )
+            stmt.append(",")
+            params.append(vals[v])
+            i += 0
         stmt.pop()
         self.__add_to_stmt(stmt)
         self.__add_to_params(params)
