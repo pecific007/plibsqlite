@@ -24,16 +24,20 @@ class Database:
     database_name: str  # The name of the database
     con: sqlite3.Connection  # Connection with the database
 
-    def __init__(self, database_name) -> None:
+    def __init__(self, database_name, **kwargs) -> None:
         self.database_name = database_name
         self.tables = {}
         self.stmt = ""
         self.params = []
-        self.con = sqlite3.connect(self.database_name)
+        self.con = self.connect(**kwargs)
         self.sync()
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.disconnect()
+
+    def connect(self, **kwargs) -> sqlite3.Connection:
+        """This method is used to connect to the database"""
+        return sqlite3.connect(self.database_name, **kwargs)
 
     def disconnect(self) -> None:
         """This method is used to disconnect from the database"""
