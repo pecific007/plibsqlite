@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import plibsqlite as sql
+from plibsqlite import Database
 
 
 def add_newline(func):
@@ -17,7 +17,7 @@ def print_select_statements(data) -> None:
     return
 
 
-db = sql.Database("database.db")
+db = Database("database.db")
 
 
 @add_newline

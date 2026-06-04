@@ -1,11 +1,11 @@
 import sqlite3
 from typing import Any, Self
 
-###########################################################
-"                                                         "
-""" THIS MODULE PROVIDES BASIC C.U.R.D. FUNCTIONALITIES """
-"                                                         "
-###########################################################
+#############################################################
+"|%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%|"
+"|  THIS MODULE PROVIDES BASIC C.U.R.D. FUNCTIONALITIES    |"
+"|%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%|"
+#############################################################
 
 
 class Table:
@@ -44,6 +44,8 @@ class Database:
         self.con.close()
 
     def sync(self) -> None:
+        """Sync with database. This will add all the pre-existing tables to the self.tables,
+        which is pretty useless."""
         tables_full = (
             self.select("name", "sqlite_master")
             .where("=", vals={"type": "table"})
@@ -68,10 +70,11 @@ class Database:
         print("Schema:")
         for t in self.tables:
             print(self.tables[t].name, self.tables[t].fields)
+        return
 
+    # NOTE: This function will execute without appending exec()
     def create_table(self, table_name: str, **kwargs: Any) -> Self:
         """This method will create a table in the database"""
-        """ Unlike other methods, this will by default execute statements """
         table = Table(table_name, kwargs)
         stmt = []
         stmt.append(f"CREATE TABLE IF NOT EXISTS {table_name}(")
@@ -83,6 +86,20 @@ class Database:
         self.__add_to_stmt(stmt)
         self.exec(self.stmt)
         self.tables[table_name] = table
+        return self
+
+    # This is a poor implementation of this function. But will work for now
+    # NOTE: This function will execute without appending exec()
+    def create_index(self, index_name: str, col: str, unique=False) -> Self:
+        UNIQUE = "UNIQUE"
+        NOTUNIQUE = ""
+        # ex stmt:
+        # CREATE UNIQUE INDEX username ON users(username)
+        #                     ^-index     ^-table      ^-column
+        self.stmt += (
+            f"CREATE {UNIQUE if unique else NOTUNIQUE} INDEX {index_name} ON {col}"
+        )
+        self.exec()
         return self
 
     def exec(
@@ -123,14 +140,10 @@ class Database:
         self.__add_to_params(params)
         return self
 
-    def select(
-        self,
-        columns: list[Any] | str,
-        table_name: str,
-    ) -> Self:
-        """This method will return data from the server"""
+    def select(self, columns: list[Any] | str, table_name: str, distinc=False) -> Self:
+        """This method will return data from the database"""
         stmt = []
-        stmt.append("SELECT")
+        stmt.append(f"SELECT {'DISTINCT' if distinc else ''}")
         if isinstance(columns, str):
             stmt.append(columns)
         elif isinstance(columns, list):
@@ -197,7 +210,8 @@ class Database:
     def update(
         self, table_name: str, operators: str | list, vals: dict, where: dict
     ) -> Self:
-        """This method is used to update any values in a table"""
+        """This method is used to update any values in a table
+        NOTE: Where clause is required, it is automatically appended."""
         stmt = []
         params = []
         stmt.append(f'UPDATE "{table_name}" SET')
@@ -228,8 +242,9 @@ class Database:
         self.where(operators, vals)
         return self
 
+    # NOTE: This function will execute without appending exec()
     def drop(self, table_name: str) -> Self:
-        """Unlike other methods, this will just execute the statement"""
+        """This method will drop the table"""
         self.exec(f"DROP TABLE {table_name}")
         return self
 
@@ -251,10 +266,13 @@ class Database:
     def __condition_logic(
         self, operators: str | list[Any], vals: str | dict[Any, Any]
     ) -> None:
+        # employee_id BETWEEN 1 AND 10
         stmt = []
         params = []
         if isinstance(vals, str):
-            stmt.append(f" {vals} IN (")
+            if isinstance(operators, str):
+                if operators.upper() == "IN":
+                    stmt.append(f" {vals} IN (")
         else:
             i = 0
             for v in vals:
