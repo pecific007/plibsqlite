@@ -8,7 +8,7 @@
 
 ## Example
 
-Here is a quick example of how to use this library. The usage of all the functions is shown in the `examples.py`
+Here is a quick example of how to use this library. The usage of all the functions is shown in the [`examples.py`](./examples.py)
 
 ``` python
 from plibsqlite import Database
