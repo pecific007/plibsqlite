@@ -131,7 +131,7 @@ class Database:
             stmt.append(f'"{k}"')
             stmt.append(",")
         stmt.pop()
-        if "none" in kwargs:
+        if kwargs.get("none"):
             stmt.append(")")
         else:
             stmt.append(") VALUES (")
