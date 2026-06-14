@@ -59,6 +59,12 @@ def example__insert_values(name: str) -> None:
         db.insert(name, name=k, desc=values[k]).exec()
     return
 
+@add_newline
+def example__insert_value_from_select(table1: str, table2: str) -> None:
+    # Adding value from one table into anotehr using select
+    print("Inserting values from another table")
+    db.insert(table2, none=True, name="", desc="").select(["name", "desc"], table1).exec()
+    return
 
 @add_newline
 def example__select_values(name: str) -> None:
@@ -173,7 +179,7 @@ if __name__ == "__main__":
     example__select_with_order_by_and_limit("first")
     example__select_with_group_by("first")
     example__create_table("second")
-    example__insert_values("second")
+    example__insert_value_from_select("first", "second")
     example__select_with_where_in_condition("first", "second")
     example__select_using_condition_method("second")
     example__join_tables("first", "second")

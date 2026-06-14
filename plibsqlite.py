@@ -126,16 +126,21 @@ class Database:
         params = []
         stmt.append(f'INSERT INTO "{table_name}" (')
         for k in kwargs:
+            if k == "none":
+                continue
             stmt.append(f'"{k}"')
             stmt.append(",")
         stmt.pop()
-        stmt.append(") VALUES (")
-        for k in kwargs:
-            stmt.append("?")
-            stmt.append(",")
-            params.append(kwargs[k])
-        stmt.pop()
-        stmt.append(")")
+        if "none" in kwargs:
+            stmt.append(")")
+        else:
+            stmt.append(") VALUES (")
+            for k in kwargs:
+                stmt.append("?")
+                stmt.append(",")
+                params.append(kwargs[k])
+            stmt.pop()
+            stmt.append(")")
         self.__add_to_stmt(stmt)
         self.__add_to_params(params)
         return self
