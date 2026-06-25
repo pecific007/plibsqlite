@@ -73,11 +73,14 @@ class Database:
         return
 
     # NOTE: This function will execute without appending exec()
-    def create_table(self, table_name: str, **kwargs: Any) -> Self:
+    def create_table(self, table_name: str, columns: list = [], **kwargs: Any) -> Self:
         """This method will create a table in the database"""
         table = Table(table_name, kwargs)
         stmt = []
         stmt.append(f"CREATE TABLE IF NOT EXISTS {table_name}(")
+        for f in columns:
+            stmt.append(f)
+            stmt.append(",")
         for f in kwargs:
             stmt.append(f"{f} {kwargs[f]}")
             stmt.append(",")
@@ -291,3 +294,18 @@ class Database:
         self.__add_to_stmt(stmt)
         self.__add_to_params(params)
         return
+
+
+class data_type:
+    INTEGER = "INTEGER"
+    REAL = "REAL"
+    FLOAT = "REAL"
+    TEXT = "TEXT"
+    BLOB = "BLOB"
+    JSON = "JSON"
+    BOOL = "BOOLEAN"
+
+
+# ID INTERGER PRIMARY KEY NOT NULL
+def col(name: str, data_type: str, pk: bool = False, null: bool = False) -> str:
+    return f"{name} {data_type} {'PRIMARY KEY' if pk else ''} {'NOT NULL' if not null else 'NULL'}"

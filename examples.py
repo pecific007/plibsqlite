@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from plibsqlite import Database
+from plibsqlite import Database, col, data_type
 
 
 def add_newline(func):
@@ -32,9 +32,11 @@ def example__create_table(name: str) -> None:
     print("Create table")
     db.create_table(
         name,
-        id="INTEGER PRIMARY KEY",
-        name="TEXT NOT NULL",
-        desc="TEXT NOT NULL",
+        columns=[
+            col("id", data_type.INTEGER, pk=True),
+            col("name", data_type.TEXT, null=False),
+            col("desc", data_type.TEXT, null=False),
+        ],
     )
     return
 
@@ -59,12 +61,16 @@ def example__insert_values(name: str) -> None:
         db.insert(name, name=k, desc=values[k]).exec()
     return
 
+
 @add_newline
 def example__insert_value_from_select(table1: str, table2: str) -> None:
     # Adding value from one table into anotehr using select
     print("Inserting values from another table")
-    db.insert(table2, none=True, name="", desc="").select(["name", "desc"], table1).exec()
+    db.insert(table2, none=True, name="", desc="").select(
+        ["name", "desc"], table1
+    ).exec()
     return
+
 
 @add_newline
 def example__select_values(name: str) -> None:
